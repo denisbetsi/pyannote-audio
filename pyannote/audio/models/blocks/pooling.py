@@ -101,7 +101,15 @@ class StatsPool(nn.Module):
 
         if weights is None:
             mean = sequences.mean(dim=-1)
-            std = sequences.std(dim=-1, correction=1)
+            # Calculate std with safe correction factor
+            num_frames = sequences.size(-1)
+            if num_frames > 1:
+                # Use unbiased estimation only when we have enough samples
+                correction = min(1, num_frames - 1)  # Ensure correction doesn't exceed sample size
+                std = torch.sqrt(torch.var(sequences, dim=-1, unbiased=True) + 1e-8)
+            else:
+                # For single frame, use biased estimation
+                std = torch.zeros_like(mean)
             return torch.cat([mean, std], dim=-1)
 
         if weights.dim() == 2:
